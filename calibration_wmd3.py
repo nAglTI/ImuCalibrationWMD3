@@ -50,7 +50,7 @@ class WMD3Protocol(asyncio.Protocol):
             self.received_message = b''
             if self.message_number in [7, 9, 10]:
                 check_boundaries(self.message_number, True)
-        elif len(self.received_message) == 42:
+        elif len(self.received_message) == 42 or len(self.received_message) == 84:
             self.received_message = b''
             self.check_operation(self.message_number)
         if b'\n' in data:
@@ -316,11 +316,15 @@ def create_bg_loop():
         except asyncio.CancelledError as e:
             print('CANCELLEDERROR {}'.format(e))
         finally:
-            for task in asyncio.all_tasks():
-                task.cancel()
-            loop.run_until_complete(loop.shutdown_asyncgens())
-            loop.stop()
-            loop.close()
+            gui.show_alert_dialog(1)
+            # try:
+            #     for task in asyncio.all_tasks():
+            #         task.cancel()
+            #     loop.run_until_complete(loop.shutdown_asyncgens())
+            #     loop.stop()
+            #     loop.close()
+            # finally:
+            #     gui.show_alert_dialog(1)
 
     new_loop = asyncio.new_event_loop()
     t = threading.Thread(target=to_bg, args=(new_loop,))
@@ -345,12 +349,4 @@ async def read_from_COM(loop, comName, rate=9600):
 
 def start_calibration():
     main_loop = asyncio.get_event_loop()
-    main_task = main_loop.run_until_complete(start_loop())
-# if __name__ == '__main__':
-#     #save_imu_cal_to_ini(Path("calibrations/imu1/Turntable/imu1_2023-07-19_16-01.json"))
-#     # imu_json = pd.read_json(Path("calibrations/imu1/Turntable/imu1_2023-07-19_16-01.json"))
-#     # print(re.findall("imu\\d*_.*?\\.", "calibrations/imu1/Turntable/imu1_2023-07-19_16-01.json")[0])
-#     #print(imu_json["K_ga"][3])
-#     # process_calibration()
-#     main_loop = asyncio.get_event_loop()
-#     main_task = main_loop.run_until_complete(start_loop())
+    main_loop.run_until_complete(start_loop())

@@ -151,9 +151,9 @@ class Ui_MainWindow(object):
 
     def calibration_event(self):
         global is_start_calibration
-        show_alert_dialog(2)
-        is_start_calibration = True
         calibration_wmd3.start_calibration()
+        is_start_calibration = True
+        show_alert_dialog(2)
 
 
 def show_alert_dialog(alert_id):
