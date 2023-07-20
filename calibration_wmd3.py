@@ -14,6 +14,8 @@ import matplotlib.pyplot as plt
 from numpy.linalg import norm
 import re
 
+import gui
+
 
 class WMD3Protocol(asyncio.Protocol):
     op_number = 0
@@ -272,6 +274,7 @@ def process_calibration():
     plt.show()
 
     ferraris_regions_from_interactive_plot(data)
+    gui.show_alert_dialog(1)
     # ferraris_regions_from_interactive_plot(calibrated_data)
 
 

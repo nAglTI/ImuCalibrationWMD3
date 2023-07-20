@@ -9,8 +9,17 @@ import serial
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QMessageBox
 
 import calibration_wmd3
+
+
+alert_map = {0: ["Ошибка", "Длина значений в полях осей не должна превышать 4!"],
+             1: ["Внимание", "Калибровка завершена"],
+             2: ["Внимание", "Калибровка началась. Ввод будет временно отключен!"],
+             3: ["Ошибка", "Нельзя отправлять команды во время работы калибровки!"]}
+
+is_start_calibration = False
 
 
 class Ui_MainWindow(object):
@@ -119,19 +128,41 @@ class Ui_MainWindow(object):
 
 
     def start_event(self):
-        ser = serial.Serial('COM11', 9600, timeout=5)
-        message = f"0deg{self.xText.toPlainText().zfill(5)}.000-{self.yText.toPlainText().zfill(5)}.000-{self.zText.toPlainText().zfill(5)}.000-00000.000-040.0\n"
-        ser.write(message.encode())
-        ser.close()
+        if not is_start_calibration:
+            ser = serial.Serial('COM11', 9600, timeout=5)
+            if len(self.xText.toPlainText()) > 4 or len(self.yText.toPlainText()) > 4 or len(self.zText.toPlainText()) > 4:
+                show_alert_dialog(0)
+            else:
+                message = f"0deg{self.xText.toPlainText().zfill(5)}.000-{self.yText.toPlainText().zfill(5)}.000-{self.zText.toPlainText().zfill(5)}.000-00000.000-040.0\n"
+                ser.write(message.encode())
+            ser.close()
+        else:
+            show_alert_dialog(3)
+
 
     def home_event(self):
-        ser = serial.Serial('COM11', 9600, timeout=5)
-        message = "home0\n"
-        ser.write(message.encode())
-        ser.close()
+        if not is_start_calibration:
+            ser = serial.Serial('COM11', 9600, timeout=5)
+            message = "home0\n"
+            ser.write(message.encode())
+            ser.close()
+        else:
+            show_alert_dialog(3)
 
     def calibration_event(self):
+        global is_start_calibration
+        show_alert_dialog(2)
+        is_start_calibration = True
         calibration_wmd3.start_calibration()
+
+
+def show_alert_dialog(alert_id):
+    msg = QMessageBox()
+    msg.setIcon(QMessageBox.Critical)
+    msg.setText(alert_map[alert_id][0])
+    msg.setInformativeText(alert_map[alert_id][1])
+    msg.setWindowTitle(alert_map[alert_id][0])
+    msg.exec_()
 
 
 if __name__ == "__main__":
