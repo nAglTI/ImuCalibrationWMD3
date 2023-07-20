@@ -340,11 +340,14 @@ async def read_from_COM(loop, comName, rate=9600):
     await serial_asyncio.create_serial_connection(loop, ImuSensorProtocol, comName, baudrate=rate)
 
 
-if __name__ == '__main__':
-    #save_imu_cal_to_ini(Path("calibrations/imu1/Turntable/imu1_2023-07-19_16-01.json"))
-    # imu_json = pd.read_json(Path("calibrations/imu1/Turntable/imu1_2023-07-19_16-01.json"))
-    # print(re.findall("imu\\d*_.*?\\.", "calibrations/imu1/Turntable/imu1_2023-07-19_16-01.json")[0])
-    #print(imu_json["K_ga"][3])
-    # process_calibration()
+def start_calibration():
     main_loop = asyncio.get_event_loop()
     main_task = main_loop.run_until_complete(start_loop())
+# if __name__ == '__main__':
+#     #save_imu_cal_to_ini(Path("calibrations/imu1/Turntable/imu1_2023-07-19_16-01.json"))
+#     # imu_json = pd.read_json(Path("calibrations/imu1/Turntable/imu1_2023-07-19_16-01.json"))
+#     # print(re.findall("imu\\d*_.*?\\.", "calibrations/imu1/Turntable/imu1_2023-07-19_16-01.json")[0])
+#     #print(imu_json["K_ga"][3])
+#     # process_calibration()
+#     main_loop = asyncio.get_event_loop()
+#     main_task = main_loop.run_until_complete(start_loop())
