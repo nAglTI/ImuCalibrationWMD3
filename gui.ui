@@ -12,8 +12,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>300</height>
+    <width>350</width>
+    <height>350</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -24,14 +24,14 @@
   </property>
   <property name="minimumSize">
    <size>
-    <width>800</width>
-    <height>300</height>
+    <width>350</width>
+    <height>350</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>800</width>
-    <height>300</height>
+    <width>350</width>
+    <height>350</height>
    </size>
   </property>
   <property name="contextMenuPolicy">
@@ -50,10 +50,16 @@
      <verstretch>0</verstretch>
     </sizepolicy>
    </property>
+   <property name="minimumSize">
+    <size>
+     <width>7</width>
+     <height>0</height>
+    </size>
+   </property>
    <property name="maximumSize">
     <size>
      <width>1000</width>
-     <height>300</height>
+     <height>320</height>
     </size>
    </property>
    <widget class="QWidget" name="verticalLayoutWidget">
@@ -61,21 +67,70 @@
      <rect>
       <x>10</x>
       <y>10</y>
-      <width>741</width>
-      <height>161</height>
+      <width>321</width>
+      <height>284</height>
      </rect>
     </property>
-    <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0">
+    <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0,0,0,0,0">
      <property name="spacing">
       <number>0</number>
      </property>
      <property name="sizeConstraint">
-      <enum>QLayout::SetMinimumSize</enum>
+      <enum>QLayout::SetDefaultConstraint</enum>
      </property>
      <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_6">
+      <layout class="QHBoxLayout" name="horizontalLayout_7" stretch="1,2">
+       <property name="bottomMargin">
+        <number>5</number>
+       </property>
+       <item>
+        <widget class="QLabel" name="label_4">
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>20</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>COM для WMD3:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="wmd3ComList"/>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_8" stretch="1,2">
+       <property name="bottomMargin">
+        <number>5</number>
+       </property>
+       <item>
+        <widget class="QLabel" name="label_5">
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>20</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>COM для IMU:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="imuComList"/>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="1,15">
        <property name="sizeConstraint">
         <enum>QLayout::SetNoConstraint</enum>
+       </property>
+       <property name="bottomMargin">
+        <number>5</number>
        </property>
        <item>
         <widget class="QLabel" name="label">
@@ -109,7 +164,10 @@
       </layout>
      </item>
      <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_5">
+      <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="1,15">
+       <property name="bottomMargin">
+        <number>5</number>
+       </property>
        <item>
         <widget class="QLabel" name="label_2">
          <property name="maximumSize">
@@ -136,7 +194,10 @@
       </layout>
      </item>
      <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_3">
+      <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,15">
+       <property name="bottomMargin">
+        <number>5</number>
+       </property>
        <item>
         <widget class="QLabel" name="label_3">
          <property name="maximumSize">
@@ -164,17 +225,13 @@
      </item>
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_4">
+       <property name="bottomMargin">
+        <number>10</number>
+       </property>
        <item>
         <widget class="QPushButton" name="home0Btn">
          <property name="text">
           <string>Исходное положение</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="calibBtn">
-         <property name="text">
-          <string>Калибровка</string>
          </property>
         </widget>
        </item>
@@ -187,6 +244,20 @@
        </item>
       </layout>
      </item>
+     <item>
+      <widget class="QPushButton" name="calibBtn">
+       <property name="text">
+        <string>Калибровка</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton">
+       <property name="text">
+        <string>Старт AllanDeviation</string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </widget>
   </widget>
@@ -195,7 +266,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
+     <width>350</width>
      <height>22</height>
     </rect>
    </property>

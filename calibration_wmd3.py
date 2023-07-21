@@ -4,6 +4,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+import numpy as np
 import serial_asyncio
 import pandas as pd
 import json
@@ -13,6 +14,8 @@ from imucal.management import save_calibration_info
 import matplotlib.pyplot as plt
 from numpy.linalg import norm
 import re
+
+from scipy import signal
 
 import gui
 
@@ -202,7 +205,7 @@ def process_calibration():
     regions = ferraris_regions_from_section_list(data, section_list)
 
     cal = TurntableCalibration()
-    cal_info = cal.compute(
+    cal_info = cal.compute(  # sampling_rate_hz - это герцовка
         regions, sampling_rate_hz=20.0, from_acc_unit="m/s^2", from_gyr_unit="deg/s", comment="1"
     )
     file_path = save_calibration_info(
@@ -273,9 +276,228 @@ def process_calibration():
     plt.savefig('xz_accel_data.png')
     plt.show()
 
-    ferraris_regions_from_interactive_plot(data)
+    # ferraris_regions_from_interactive_plot(data)
     gui.show_alert_dialog(1)
     # ferraris_regions_from_interactive_plot(calibrated_data)
+
+
+def stop_allan_dev():
+    try:
+        allan_imu_loop.stop()
+        csvFile.close()
+    except RuntimeError as e:
+        print(e)
+    data = np.genfromtxt("imu_raw_data.csv", delimiter=',')
+    FS = 20  # data output rate in Hz - герцовка
+    TS = 1.0 / FS
+    ax = data[1:, 4]  # * 9.80665  # m/s/s
+    ay = data[1:, 5]  # * 9.80665
+    az = data[1:, 6]  # * 9.80665AllanDeviation
+    gx = data[1:, 1]  # deg/s
+    gy = data[1:, 2]
+    gz = data[1:, 3]
+
+    N = len(gx)
+    freqBins = np.linspace(0, FS / 2, N // 2)  # Freq. labels [Hz]
+    fax = np.fft.fft(ax)  # FFT of accel. data
+    fgx = np.fft.fft(gx)  # FFT of gyro data
+    fay = np.fft.fft(ay)  # FFT of accel. data
+    fgy = np.fft.fft(gy)  # FFT of gyro data
+    faz = np.fft.fft(az)  # FFT of accel. data
+    fgz = np.fft.fft(gz)  # FFT of gyro data
+
+    # Plot x-accel. FFT
+    plt.figure()
+    plt.plot(freqBins, (2 / N) * np.abs(fax[:N // 2]))
+    plt.title('FFT of X-Accelerometer Data')
+    plt.xlabel('Frequency [Hz]')
+    plt.ylabel('Amplitude')
+    plt.grid()
+    plc = plt.gca()
+    plc.set_ylim([0, 0.005])
+    plt.savefig('FFT of X-Accelerometer Data.png')
+
+    # Plot y-accel. FFT
+    plt.figure()
+    plt.plot(freqBins, (2 / N) * np.abs(fay[:N // 2]))
+    plt.title('FFT of Y-Accelerometer Data')
+    plt.xlabel('Frequency [Hz]')
+    plt.ylabel('Amplitude')
+    plt.grid()
+    plc = plt.gca()
+    plc.set_ylim([0, 0.005])
+    plt.savefig('FFT of Y-Accelerometer Data.png')
+
+    # Plot z-accel. FFT
+    plt.figure()
+    plt.plot(freqBins, (2 / N) * np.abs(faz[:N // 2]))
+    plt.title('FFT of Z-Accelerometer Data')
+    plt.xlabel('Frequency [Hz]')
+    plt.ylabel('Amplitude')
+    plt.grid()
+    plc = plt.gca()
+    plc.set_ylim([0, 0.005])
+    plt.savefig('FFT of Z-Accelerometer Data.png')
+
+    # Plot x-gyro. FFT
+    plt.figure()
+    plt.plot(freqBins, (2 / N) * np.abs(fgx[:N // 2]))
+    plt.title('FFT of X-Gyroscope Data')
+    plt.xlabel('Frequency [Hz]')
+    plt.ylabel('Amplitude')
+    plt.grid()
+    plc = plt.gca()
+    plc.set_ylim([0, 0.01])
+    plt.savefig('FFT of X-Gyroscope Data.png')
+
+    # Plot y-gyro. FFT
+    plt.figure()
+    plt.plot(freqBins, (2 / N) * np.abs(fgy[:N // 2]))
+    plt.title('FFT of Y-Gyroscope Data')
+    plt.xlabel('Frequency [Hz]')
+    plt.ylabel('Amplitude')
+    plt.grid()
+    plc = plt.gca()
+    plc.set_ylim([0, 0.01])
+    plt.savefig('FFT of Y-Gyroscope Data.png')
+
+    # Plot z-gyro. FFT
+    plt.figure()
+    plt.plot(freqBins, (2 / N) * np.abs(fgz[:N // 2]))
+    plt.title('FFT of Z-Gyroscope Data')
+    plt.xlabel('Frequency [Hz]')
+    plt.ylabel('Amplitude')
+    plt.grid()
+    plc = plt.gca()
+    plc.set_ylim([0, 0.01])
+    plt.savefig('FFT of Z-Gyroscope Data.png')
+
+    plt.show()
+
+    # Conversion factor: m/s/s -> ug (micro G's)
+    accel2ug = 1e6 / 9.80665
+
+    # Compute PSD via Welch algorithm
+    freqax, psdax = signal.welch(ax, FS, nperseg=1024, scaling='density')  # ax
+    freqay, psday = signal.welch(ay, FS, nperseg=1024, scaling='density')  # ay
+    freqaz, psdaz = signal.welch(az, FS, nperseg=1024, scaling='density')  # az
+
+    freqgx, psdgx = signal.welch(gx, FS, nperseg=1024, scaling='density')  # gx
+    freqgy, psdgy = signal.welch(gy, FS, nperseg=1024, scaling='density')  # gy
+    freqgz, psdgz = signal.welch(gz, FS, nperseg=1024, scaling='density')  # gz
+
+    # Convert to [ug / sqrt(Hz)]
+    psdax = np.sqrt(psdax) * accel2ug
+    psday = np.sqrt(psday) * accel2ug
+    psdaz = np.sqrt(psdaz) * accel2ug
+
+    psdgx = np.sqrt(psdgx)
+    psdgy = np.sqrt(psdgy)
+    psdgz = np.sqrt(psdgz)
+
+    # Compute noise spectral densities
+    ndax = np.mean(psdax)
+    nday = np.mean(psday)
+    ndaz = np.mean(psdaz)
+    print('AX Noise Density: %f ug/sqrt(Hz)' % ndax)
+    print('AY Noise Density: %f ug/sqrt(Hz)' % nday)
+    print('AZ Noise Density: %f ug/sqrt(Hz)' % ndaz)
+
+    ndgx = np.mean(psdgx)
+    ndgy = np.mean(psdgy)
+    ndgz = np.mean(psdgz)
+    print('GX Noise Density: %f dps/sqrt(Hz)' % ndgx)
+    print('GY Noise Density: %f dps/sqrt(Hz)' % ndgy)
+    print('GZ Noise Density: %f dps/sqrt(Hz)' % ndgz)
+
+    # Plot accel. data
+    plt.figure()
+    plt.plot(freqax, psdax, label='ax')
+    plt.plot(freqay, psday, label='ay')
+    plt.plot(freqaz, psdaz, label='az')
+    plt.title('Accelerometer Power Spectral Density')
+    plt.xlabel('Frequency [Hz]')
+    plt.ylabel(r'Spectral Density  $\mu g / \sqrt{Hz}$')
+    plt.legend()
+    plt.grid()
+    plt.savefig('Accelerometer Power Spectral Density.png')
+
+    # Plot gyro data
+    plt.figure()
+    plt.plot(freqgx, psdgx, label='gx')
+    plt.plot(freqgy, psdgy, label='gy')
+    plt.plot(freqgz, psdgz, label='gz')
+    plt.title('Gyro Noise Spectral Density')
+    plt.xlabel('Frequency [Hz]')
+    plt.ylabel(r'Spectral Density  $dps / \sqrt{Hz}$')
+    plt.legend()
+    plt.grid()
+    plt.savefig('Gyro Noise Spectral Density.png')
+    plt.show()
+
+    # Calculate gyro angles
+    thetax = np.cumsum(gx) * TS  # [deg]
+    thetay = np.cumsum(gy) * TS
+    thetaz = np.cumsum(gz) * TS
+
+    # Compute Allan deviations
+    (taux, adx) = AllanDeviation(thetax, FS, maxNumM=200)
+    (tauy, ady) = AllanDeviation(thetay, FS, maxNumM=200)
+    (tauz, adz) = AllanDeviation(thetaz, FS, maxNumM=200)
+
+    # Plot data on log-scale
+    plt.figure()
+    plt.title('Gyro Allan Deviations')
+    plt.plot(taux, adx, label='gx')
+    plt.plot(tauy, ady, label='gy')
+    plt.plot(tauz, adz, label='gz')
+    plt.xlabel(r'$\tau$ [sec]')
+    plt.ylabel('Deviation [deg/sec]')
+    plt.grid(True, which="both", ls="-", color='0.65')
+    plt.legend()
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.savefig('Gyro Allan Deviations.png')
+    plt.show()
+
+
+def AllanDeviation(dataArr: np.ndarray, fs: float, maxNumM: int = 100):
+    """Compute the Allan deviation (sigma) of time-series data.
+
+    Algorithm obtained from Mathworks:
+    https://www.mathworks.com/help/fusion/ug/inertial-sensor-noise-analysis-using-allan-variance.html
+
+    Args
+    ----
+        dataArr: 1D data array
+        fs: Data sample frequency in Hz
+        maxNumM: Number of output points
+
+    Returns
+    -------
+        (taus, allanDev): Tuple of results
+        taus (numpy.ndarray): Array of tau values
+        allanDev (numpy.ndarray): Array of computed Allan deviations
+    """
+    ts = 1.0 / fs
+    N = len(dataArr)
+    Mmax = 2 ** np.floor(np.log2(N / 2))
+    M = np.logspace(np.log10(1), np.log10(Mmax), num=maxNumM)
+    M = np.ceil(M)  # Round up to integer
+    M = np.unique(M)  # Remove duplicates
+    taus = M * ts  # Compute 'cluster durations' tau
+
+    # Compute Allan variance
+    allanVar = np.zeros(len(M))
+    for i, mi in enumerate(M):
+        twoMi = int(2 * mi)
+        mi = int(mi)
+        allanVar[i] = np.sum(
+            (dataArr[twoMi:N] - (2.0 * dataArr[mi:N - mi]) + dataArr[0:N - twoMi]) ** 2
+        )
+
+    allanVar /= (2.0 * taus ** 2) * (N - (2.0 * M))
+    return taus, np.sqrt(allanVar)  # Return deviation (dev = sqrt(var))
 
 
 def save_imu_cal_to_ini(file_path):
@@ -303,6 +525,19 @@ def save_imu_cal_to_ini(file_path):
             ini_str += f"K_ga{i}{j}={col};\n"
     for i, col in enumerate(imu_file["b_g"]):
         ini_str += f"b_g{i}={col};\n"
+    ini_str += "[ZUPT];\n" \
+               "sigma_a=0.05;\n" \
+               "sigma_g=0.1;\n" \
+               "gamma=200;\n" \
+               "s_acc_x=0.005;\n" \
+               "s_acc_y=0.005;\n" \
+               "s_acc_z=0.005;\n" \
+               "s_gyro_x=0.1;\n" \
+               "s_gyro_y=0.1;\n" \
+               "s_gyro_z=0.05;\n" \
+               "s_vel_x=0.02;\n" \
+               "s_vel_y=0.02;\n" \
+               "s_vel_z=0.02;\n"
     imu_ini.write(ini_str)
     imu_ini.close()
     print(ini_str)
@@ -332,21 +567,26 @@ def create_bg_loop():
     return new_loop
 
 
-async def start_loop():
+async def start_loop(wmd3_port, imu_port):
     loop_WMD3 = create_bg_loop()
-    asyncio.run_coroutine_threadsafe(write_to_WMD3(loop_WMD3), loop_WMD3)
+    asyncio.run_coroutine_threadsafe(write_to_WMD3(loop_WMD3, wmd3_port), loop_WMD3)
     loop_imu_read = create_bg_loop()
-    asyncio.run_coroutine_threadsafe(read_from_COM(loop_imu_read, "COM12", 921200), loop_imu_read)
+    asyncio.run_coroutine_threadsafe(read_from_COM(loop_imu_read, imu_port, 921200), loop_imu_read)
 
 
-async def write_to_WMD3(loop):
-    await serial_asyncio.create_serial_connection(loop, WMD3Protocol, 'COM11', baudrate=9600)
+async def write_to_WMD3(loop, wmd3_port):
+    await serial_asyncio.create_serial_connection(loop, WMD3Protocol, wmd3_port, baudrate=9600)
 
 
 async def read_from_COM(loop, comName, rate=9600):
     await serial_asyncio.create_serial_connection(loop, ImuSensorProtocol, comName, baudrate=rate)
 
 
-def start_calibration():
+def start_calibration(wmd3_port, imu_port):
     main_loop = asyncio.get_event_loop()
-    main_loop.run_until_complete(start_loop())
+    main_loop.run_until_complete(start_loop(wmd3_port, imu_port))
+
+
+allan_imu_loop = create_bg_loop()
+def start_allan_dev(imu_port):
+    asyncio.run_coroutine_threadsafe(read_from_COM(allan_imu_loop, imu_port, 921200), allan_imu_loop)
