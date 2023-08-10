@@ -116,16 +116,21 @@ class ImuSensorProtocol(asyncio.Protocol):
     def data_received(self, data):
         self.received_message += data
         # print('imu received', repr(self.received_message), repr(self.received_message)[-2])
-        if repr(self.received_message)[-2] == 'n':
+        if self.received_message.decode('utf-8').__contains__('\r\n'):
             # print('data received', repr(self.received_message))
-            imu_raw = self.received_message.decode('utf-8').split('\r\n')[0].split(',')
-            imu_list = [csv_row_count, imu_raw[3], imu_raw[4], imu_raw[5], imu_raw[0], imu_raw[1], imu_raw[2]]
-            if csvFile.closed:
-                self.transport.close()
-                self.transport.loop.stop()
-            else:
-                process_imu_data(imu_list)
-            self.received_message = b''
+            imu_raw = self.received_message.decode('utf-8').split('\r\n')
+            for i in range(0, len(imu_raw) - 1):
+                imu_mess = imu_raw[i].split(',')
+                if len(imu_mess) == 6:
+                    imu_list = [csv_row_count, imu_mess[3], imu_mess[4], imu_mess[5], imu_mess[0], imu_mess[1], imu_mess[2]]
+                    if csvFile.closed:
+                        self.transport.close()
+                        self.transport.loop.stop()
+                    else:
+                        process_imu_data(imu_list)
+                else:
+                    print("Not full message!")
+            self.received_message = bytes(imu_raw[-1], 'utf-8')
 
         # self.pause_reading()
 
@@ -507,24 +512,24 @@ def save_imu_cal_to_ini(file_path):
     imu_file = pd.read_json(file_path)  # Path("calibrations/imu1/Turntable/imu1_2023-07-19_16-01.json"))
     for i, row in enumerate(imu_file["K_a"]):
         for j, col in enumerate(imu_file["K_a"][i]):
-            ini_str += f"K_a{i}{j}={col};\n"
+            ini_str += f"K_a{i}{j}={'{0:.16f}'.format(col)};\n"
     for i, row in enumerate(imu_file["R_a"]):
         for j, col in enumerate(imu_file["R_a"][i]):
-            ini_str += f"R_a{i}{j}={col};\n"
+            ini_str += f"R_a{i}{j}={'{0:.16f}'.format(col)};\n"
     for i, col in enumerate(imu_file["b_a"]):
-        ini_str += f"b_a{i}={col};\n"
+        ini_str += f"b_a{i}={'{0:.16f}'.format(col)};\n"
 
     for i, row in enumerate(imu_file["K_g"]):
         for j, col in enumerate(imu_file["K_g"][i]):
-            ini_str += f"K_g{i}{j}={col};\n"
+            ini_str += f"K_g{i}{j}={'{0:.16f}'.format(col)};\n"
     for i, row in enumerate(imu_file["R_g"]):
         for j, col in enumerate(imu_file["R_g"][i]):
-            ini_str += f"R_g{i}{j}={col};\n"
+            ini_str += f"R_g{i}{j}={'{0:.16f}'.format(col)};\n"
     for i, row in enumerate(imu_file["K_ga"]):
         for j, col in enumerate(imu_file["K_ga"][i]):
-            ini_str += f"K_ga{i}{j}={col};\n"
+            ini_str += f"K_ga{i}{j}={'{0:.16f}'.format(col)};\n"
     for i, col in enumerate(imu_file["b_g"]):
-        ini_str += f"b_g{i}={col};\n"
+        ini_str += f"b_g{i}={'{0:.16f}'.format(col)};\n"
     ini_str += "[ZUPT];\n" \
                "sigma_a=0.05;\n" \
                "sigma_g=0.1;\n" \
